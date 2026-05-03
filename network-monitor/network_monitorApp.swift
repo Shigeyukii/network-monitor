@@ -1,10 +1,3 @@
-//
-//  network_monitorApp.swift
-//  network-monitor
-//
-//  Created by 目時重孝 on 2026/05/03.
-//
-
 import SwiftUI
 import SwiftData
 
@@ -12,20 +5,33 @@ import SwiftData
 struct network_monitorApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            Device.self,
+            PingRecord.self,
+            TCPPort.self,
+            TCPRecord.self,
         ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            return try ModelContainer(for: schema, configurations: [config])
         } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            fatalError("ModelContainer の作成に失敗しました: \(error)")
         }
     }()
+
+    init() {
+        // BGTaskScheduler の登録は init() で行う必要がある
+        BackgroundMonitoringService.registerTasks()
+    }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .task {
+                    // 通知許可をリクエスト
+                    await NotificationService.shared.requestPermission()
+                    // 次回バックグラウンド実行を予約
+                    BackgroundMonitoringService.scheduleNextRefresh()
+                }
         }
         .modelContainer(sharedModelContainer)
     }
