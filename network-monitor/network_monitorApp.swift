@@ -9,6 +9,7 @@ struct network_monitorApp: App {
             PingRecord.self,
             TCPPort.self,
             TCPRecord.self,
+            DevicePosition.self,
         ])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         do {
@@ -19,7 +20,6 @@ struct network_monitorApp: App {
     }()
 
     init() {
-        // BGTaskScheduler の登録は init() で行う必要がある
         BackgroundMonitoringService.registerTasks()
     }
 
@@ -27,9 +27,7 @@ struct network_monitorApp: App {
         WindowGroup {
             ContentView()
                 .task {
-                    // 通知許可をリクエスト
                     await NotificationService.shared.requestPermission()
-                    // 次回バックグラウンド実行を予約
                     BackgroundMonitoringService.scheduleNextRefresh()
                 }
         }

@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 import Observation
+import WidgetKit
 
 struct DeviceStatus {
     var isPingUp: Bool?
@@ -44,7 +45,6 @@ final class MonitoringService {
         Task { await checkAllDevices() }
     }
 
-    /// バックグラウンドタスクから呼ぶ用：タイマーを起動せず一度だけ全デバイスをチェック
     func runSinglePass(modelContext: ModelContext) async {
         self.modelContext = modelContext
         await checkAllDevices()
@@ -60,9 +60,7 @@ final class MonitoringService {
 
     private func checkAllDevices() async {
         guard let context = modelContext else { return }
-        let descriptor = FetchDescriptor<Device>(
-            predicate: #Predicate { $0.isMonitored }
-        )
+        let descriptor = FetchDescriptor<Device>(predicate: #Predicate { $0.isMonitored })
         guard let devices = try? context.fetch(descriptor) else { return }
 
         await withTaskGroup(of: Void.self) { group in
@@ -71,11 +69,10 @@ final class MonitoringService {
                 let ip = device.ipAddress
                 let name = device.name
                 let ports = device.tcpPorts
-
                 group.addTask { [self] in
                     await self.checkDevice(
-                        id: deviceID, name: name, ip: ip, ports: ports,
-                        device: device, context: context
+                        id: deviceID, name: name, ip: ip,
+                        ports: ports, device: device, context: context
                     )
                 }
             }
@@ -83,6 +80,21 @@ final class MonitoringService {
 
         pruneOldRecords(context: context)
         try? context.save()
+
+        // ウィジェット用に最新ステータスを共有 UserDefaults へ書き込む
+        let sharedStatuses = devices.map { device in
+            SharedDeviceStatus(
+                id: device.id,
+                name: device.name,
+                ipAddress: device.ipAddress,
+                groupName: device.groupName,
+                isUp: deviceStatuses[device.id]?.isPingUp,
+                responseTimeMs: deviceStatuses[device.id]?.pingResponseTimeMs,
+                lastChecked: deviceStatuses[device.id]?.lastChecked
+            )
+        }
+        SharedDataService.save(sharedStatuses)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     private func checkDevice(
@@ -100,16 +112,13 @@ final class MonitoringService {
             tcpResults.append((port, ok))
         }
 
-        let pingRecord = PingRecord(
+        context.insert(PingRecord(
             isReachable: pingResult.isReachable,
             responseTimeMs: pingResult.responseTimeMs,
             device: device
-        )
-        context.insert(pingRecord)
-
+        ))
         for (tcpPort, isReachable) in tcpResults {
-            let record = TCPRecord(isReachable: isReachable, tcpPort: tcpPort)
-            context.insert(record)
+            context.insert(TCPRecord(isReachable: isReachable, tcpPort: tcpPort))
         }
 
         var tcpStatuses: [Int: Bool] = [:]
@@ -129,21 +138,10 @@ final class MonitoringService {
     }
 
     private func pruneOldRecords(context: ModelContext) {
-        let cutoffPing = Date().addingTimeInterval(-7 * 86400)
-        let cutoffTCP = Date().addingTimeInterval(-7 * 86400)
-
-        let pingDescriptor = FetchDescriptor<PingRecord>(
-            predicate: #Predicate { $0.timestamp < cutoffPing }
-        )
-        if let old = try? context.fetch(pingDescriptor) {
-            old.forEach { context.delete($0) }
-        }
-
-        let tcpDescriptor = FetchDescriptor<TCPRecord>(
-            predicate: #Predicate { $0.timestamp < cutoffTCP }
-        )
-        if let old = try? context.fetch(tcpDescriptor) {
-            old.forEach { context.delete($0) }
-        }
+        let cutoff = Date().addingTimeInterval(-7 * 86400)
+        let pingDesc = FetchDescriptor<PingRecord>(predicate: #Predicate { $0.timestamp < cutoff })
+        let tcpDesc  = FetchDescriptor<TCPRecord>(predicate: #Predicate { $0.timestamp < cutoff })
+        (try? context.fetch(pingDesc))?.forEach { context.delete($0) }
+        (try? context.fetch(tcpDesc))?.forEach  { context.delete($0) }
     }
 }
