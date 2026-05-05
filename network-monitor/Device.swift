@@ -16,6 +16,12 @@ final class Device {
     @Relationship(deleteRule: .cascade)
     var tcpPorts: [TCPPort] = []
 
+    @Relationship(deleteRule: .cascade)
+    var snmpConfig: SNMPConfig? = nil
+
+    @Relationship(deleteRule: .cascade)
+    var trafficRecords: [TrafficRecord] = []
+
     init(name: String, ipAddress: String, groupName: String = "", isMonitored: Bool = true) {
         self.id = UUID()
         self.name = name

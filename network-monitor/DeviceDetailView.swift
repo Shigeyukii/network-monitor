@@ -8,6 +8,7 @@ struct DeviceDetailView: View {
     var status: DeviceStatus?
 
     @State private var showEdit = false
+    @State private var showSNMPConfig = false
     @State private var selectedRange: TimeRange = .oneHour
 
     enum TimeRange: String, CaseIterable {
@@ -54,16 +55,52 @@ struct DeviceDetailView: View {
             uptimeSection
             responseTimeChartSection
             tcpPortsSection
+            trafficSection
         }
         .navigationTitle(device.name)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("編集") { showEdit = true }
+                Menu {
+                    Button("デバイス編集") { showEdit = true }
+                    Button("SNMP 設定") { showSNMPConfig = true }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
             }
         }
         .sheet(isPresented: $showEdit) {
             AddDeviceView(device: device)
+        }
+        .sheet(isPresented: $showSNMPConfig) {
+            SNMPConfigSheet(device: device)
+        }
+    }
+
+    private var trafficSection: some View {
+        Section {
+            if device.snmpConfig?.isEnabled == true {
+                TrafficChartView(device: device)
+            } else {
+                Button {
+                    showSNMPConfig = true
+                } label: {
+                    Label("SNMP トラフィック監視を設定", systemImage: "waveform.path.ecg")
+                }
+            }
+        } header: {
+            HStack {
+                Text("トラフィック")
+                Spacer()
+                if device.snmpConfig?.isEnabled == true {
+                    Button {
+                        showSNMPConfig = true
+                    } label: {
+                        Text("設定")
+                            .font(.caption)
+                    }
+                }
+            }
         }
     }
 
