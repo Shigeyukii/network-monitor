@@ -22,6 +22,7 @@ final class MonitoringService {
     private var modelContext: ModelContext?
     private let pingService = PingService()
     private let tcpService = TCPService()
+    private let trafficService = TrafficMonitorService()
     private let alertService = AlertService.shared
     private let settings = AppSettings.shared
 
@@ -75,6 +76,13 @@ final class MonitoringService {
                         ports: ports, device: device, context: context
                     )
                 }
+            }
+        }
+
+        // SNMP トラフィック監視（ping と並行）
+        for device in devices {
+            if let config = device.snmpConfig, config.isEnabled {
+                await trafficService.poll(device: device, config: config, context: context)
             }
         }
 
@@ -139,9 +147,11 @@ final class MonitoringService {
 
     private func pruneOldRecords(context: ModelContext) {
         let cutoff = Date().addingTimeInterval(-7 * 86400)
-        let pingDesc = FetchDescriptor<PingRecord>(predicate: #Predicate { $0.timestamp < cutoff })
-        let tcpDesc  = FetchDescriptor<TCPRecord>(predicate: #Predicate { $0.timestamp < cutoff })
-        (try? context.fetch(pingDesc))?.forEach { context.delete($0) }
-        (try? context.fetch(tcpDesc))?.forEach  { context.delete($0) }
+        let pingDesc    = FetchDescriptor<PingRecord>(predicate: #Predicate { $0.timestamp < cutoff })
+        let tcpDesc     = FetchDescriptor<TCPRecord>(predicate: #Predicate { $0.timestamp < cutoff })
+        let trafficDesc = FetchDescriptor<TrafficRecord>(predicate: #Predicate { $0.timestamp < cutoff })
+        (try? context.fetch(pingDesc))?.forEach    { context.delete($0) }
+        (try? context.fetch(tcpDesc))?.forEach     { context.delete($0) }
+        (try? context.fetch(trafficDesc))?.forEach { context.delete($0) }
     }
 }

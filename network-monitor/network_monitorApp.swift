@@ -10,6 +10,8 @@ struct network_monitorApp: App {
             TCPPort.self,
             TCPRecord.self,
             DevicePosition.self,
+            SNMPConfig.self,
+            TrafficRecord.self,
         ])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         do {
