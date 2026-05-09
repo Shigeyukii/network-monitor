@@ -118,6 +118,20 @@ struct DashboardView: View {
                             status: monitor.deviceStatuses[device.id]
                         )
                     }
+                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                        Button {
+                            device.isInMaintenance.toggle()
+                            try? modelContext.save()
+                        } label: {
+                            Label(
+                                device.isInMaintenance ? "監視再開" : "メンテナンス",
+                                systemImage: device.isInMaintenance
+                                    ? "play.circle.fill"
+                                    : "wrench.and.screwdriver.fill"
+                            )
+                        }
+                        .tint(device.isInMaintenance ? .green : .orange)
+                    }
                 }
                 .onDelete(perform: deleteDevices)
             }
@@ -142,7 +156,9 @@ struct DeviceRowView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            StatusDot(isUp: status?.isPingUp, size: 12)
+            StatusDot(isUp: status?.isPingUp,
+                      isInMaintenance: device.isInMaintenance,
+                      size: 12)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(device.name)

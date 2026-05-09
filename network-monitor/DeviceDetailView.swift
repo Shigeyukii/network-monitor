@@ -132,6 +132,14 @@ struct DeviceDetailView: View {
             if !device.groupName.isEmpty {
                 LabeledContent("グループ", value: device.groupName)
             }
+
+            Toggle(isOn: Binding(
+                get: { device.isInMaintenance },
+                set: { device.isInMaintenance = $0; try? modelContext.save() }
+            )) {
+                Label("メンテナンスモード", systemImage: "wrench.and.screwdriver.fill")
+                    .foregroundStyle(device.isInMaintenance ? .orange : .primary)
+            }
         }
     }
 

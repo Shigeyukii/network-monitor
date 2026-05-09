@@ -61,7 +61,9 @@ final class MonitoringService {
 
     private func checkAllDevices() async {
         guard let context = modelContext else { return }
-        let descriptor = FetchDescriptor<Device>(predicate: #Predicate { $0.isMonitored })
+        let descriptor = FetchDescriptor<Device>(
+            predicate: #Predicate { $0.isMonitored && !$0.isInMaintenance }
+        )
         guard let devices = try? context.fetch(descriptor) else { return }
 
         await withTaskGroup(of: Void.self) { group in

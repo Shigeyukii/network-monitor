@@ -8,6 +8,7 @@ final class Device {
     var ipAddress: String
     var groupName: String
     var isMonitored: Bool
+    var isInMaintenance: Bool
     var createdAt: Date
 
     @Relationship(deleteRule: .cascade)
@@ -28,6 +29,7 @@ final class Device {
         self.ipAddress = ipAddress
         self.groupName = groupName
         self.isMonitored = isMonitored
+        self.isInMaintenance = false
         self.createdAt = Date()
     }
 
