@@ -6,7 +6,9 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Device.name) private var devices: [Device]
     @State private var settings = AppSettings.shared
+    @State private var trapReceiver = SNMPTrapReceiver.shared
     @State private var intervalValue: Double = Double(AppSettings.shared.pingIntervalSeconds)
+    @State private var trapPortText: String = "\(AppSettings.shared.trapReceiverPort)"
     @State private var showImportPicker = false
     @State private var exportURL: URL? = nil
     @State private var showExportSheet = false
@@ -76,6 +78,52 @@ struct SettingsView: View {
                     Text("デバイス設定")
                 } footer: {
                     Text("エクスポートしたJSONファイルを使って、デバイス設定を別の端末や同じ端末に復元できます。")
+                }
+
+                Section {
+                    Toggle("トラップ受信を有効化", isOn: Binding(
+                        get: { settings.trapReceiverEnabled },
+                        set: { enabled in
+                            settings.trapReceiverEnabled = enabled
+                            if enabled {
+                                trapReceiver.start(
+                                    port: UInt16(settings.trapReceiverPort),
+                                    context: modelContext
+                                )
+                            } else {
+                                trapReceiver.stop()
+                            }
+                        }
+                    ))
+
+                    if settings.trapReceiverEnabled {
+                        LabeledContent("受信ポート") {
+                            TextField("10162", text: $trapPortText)
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.trailing)
+                                .onChange(of: trapPortText) { _, new in
+                                    if let port = Int(new), port >= 1024, port <= 65535 {
+                                        settings.trapReceiverPort = port
+                                    }
+                                }
+                        }
+
+                        HStack {
+                            Image(systemName: trapReceiver.isListening
+                                  ? "antenna.radiowaves.left.and.right"
+                                  : "antenna.radiowaves.left.and.right.slash")
+                                .foregroundStyle(trapReceiver.isListening ? .green : .secondary)
+                            Text(trapReceiver.isListening
+                                 ? "UDP :\(trapReceiver.listenPort) で受信中"
+                                 : (trapReceiver.lastError ?? "停止中"))
+                                .font(.caption)
+                                .foregroundStyle(trapReceiver.isListening ? .green : .secondary)
+                        }
+                    }
+                } header: {
+                    Text("SNMP トラップ受信")
+                } footer: {
+                    Text("ネットワーク機器のトラップ送信先ポートを \(settings.trapReceiverPort) に設定してください（標準の162番は権限が必要なため非対応）。")
                 }
 
                 Section("データ保持") {

@@ -8,7 +8,7 @@ final class Device {
     var ipAddress: String
     var groupName: String
     var isMonitored: Bool
-    var isInMaintenance: Bool
+    var isInMaintenance: Bool = false
     var createdAt: Date
 
     @Relationship(deleteRule: .cascade)

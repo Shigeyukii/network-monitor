@@ -25,6 +25,16 @@ final class AppSettings {
         set { UserDefaults.standard.set(newValue, forKey: "alertEnabled") }
     }
 
+    var trapReceiverEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: "trapReceiverEnabled") }
+        set { UserDefaults.standard.set(newValue, forKey: "trapReceiverEnabled") }
+    }
+
+    var trapReceiverPort: Int {
+        get { max(1024, UserDefaults.standard.integer(forKey: "trapReceiverPort").nonZeroOr(10162)) }
+        set { UserDefaults.standard.set(newValue, forKey: "trapReceiverPort") }
+    }
+
     private init() {}
 }
 

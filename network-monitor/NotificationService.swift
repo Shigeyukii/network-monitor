@@ -14,6 +14,20 @@ final class NotificationService: NSObject {
         UNUserNotificationCenter.current().delegate = self
     }
 
+    func sendTrapAlert(sourceIP: String, trapName: String) {
+        let content = UNMutableNotificationContent()
+        content.title = "SNMP トラップ受信"
+        content.body = "\(sourceIP) から \(trapName)"
+        content.sound = .default
+        content.interruptionLevel = .active
+        let request = UNNotificationRequest(
+            identifier: "trap-\(sourceIP)-\(Date().timeIntervalSince1970)",
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request)
+    }
+
     func sendAlert(deviceName: String, isUp: Bool) {
         let content = UNMutableNotificationContent()
         content.title = isUp ? "回復" : "障害発生"

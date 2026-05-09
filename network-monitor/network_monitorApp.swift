@@ -13,6 +13,7 @@ struct network_monitorApp: App {
             SNMPConfig.self,
             TrafficRecord.self,
             DeviceLink.self,
+            TrapRecord.self,
         ])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         do {
